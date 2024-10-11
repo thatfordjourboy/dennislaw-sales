@@ -9,7 +9,6 @@ st.title("Dennislaw Sales Analysis - 2023-2024")
 # File upload prompts for solo and firm data
 st.sidebar.header("Upload Data Files")
 solo_file = st.sidebar.file_uploader("Upload Solo Data File", type=["xlsx"])
-firm_file = st.sidebar.file_uploader("Upload Firm Data File", type=["xlsx"])
 
 def colored_metric(label, value, delta=None, background_color="lightgray", text_color="black"):
     delta_str = f'<span style="color: {text_color}; font-size: 1.2rem;">{delta}</span>' if delta else ""
@@ -28,21 +27,19 @@ def colored_metric(label, value, delta=None, background_color="lightgray", text_
         unsafe_allow_html=True
     )
 
-# Load data only if both files are uploaded
-if solo_file and firm_file:
+# Load data only if solo data file is uploaded
+if solo_file:
     try:
         # Read the uploaded Excel files into DataFrames
         solo_data = pd.read_excel(solo_file)
-        firm_data = pd.read_excel(firm_file)
+        # firm_data = pd.read_excel(firm_file)
         
         # Correct column name typo and fill missing values with 0
         solo_data.rename(columns={"2023 Subsciptions": "2023 Subscriptions"}, inplace=True)
         solo_data.fillna(0, inplace=True)
-        firm_data.fillna(0, inplace=True)
         
         # Clean up column names to remove any leading/trailing spaces
         solo_data.columns = solo_data.columns.str.strip()
-        firm_data.columns = firm_data.columns.str.strip()
         
         # Ensure the 'Month' column is in the correct chronological order
         months_order = [
@@ -50,11 +47,9 @@ if solo_file and firm_file:
             'July', 'August', 'September', 'October', 'November', 'December'
         ]
         solo_data['Month'] = pd.Categorical(solo_data['Month'], categories=months_order, ordered=True)
-        firm_data['Month'] = pd.Categorical(firm_data['Month'], categories=months_order, ordered=True)
         
         # Sort data by 'Month'
         solo_data = solo_data.sort_values('Month')
-        firm_data = firm_data.sort_values('Month')
         
         sum_2023 = float(solo_data['2023 Sales'].sum())
         sum_2024 = float(solo_data['2024 Sales'].sum())
@@ -64,7 +59,8 @@ if solo_file and firm_file:
         subscription_type = st.sidebar.selectbox("Select Subscription Type:", ["Individual", "Firm"])
         subscription_package = st.sidebar.selectbox(
             "Select Subscription Package:", 
-            solo_data['Subscription Package'].unique() if subscription_type == "Individual" else firm_data['Subscription Package'].unique()
+            solo_data['Subscription Package'].unique() if subscription_type == "Individual" else print("That's all folks!")
+            # solo_data['Subscription Package'].unique() if subscription_type == "Individual" else firm_data['Subscription Package'].unique()
         )
         
         # Add "All" option for month selection
@@ -208,4 +204,4 @@ if solo_file and firm_file:
     except Exception as e:
         st.error(f"Relax, ano reach there yet!")
 else:
-    st.info("Please upload both Solo and Firm data files to proceed.")
+    st.info("Please upload the file for Solo revenue to proceed. Expected format is .xlsx")
