@@ -11,6 +11,23 @@ st.sidebar.header("Upload Data Files")
 solo_file = st.sidebar.file_uploader("Upload Solo Data File", type=["xlsx"])
 firm_file = st.sidebar.file_uploader("Upload Firm Data File", type=["xlsx"])
 
+def colored_metric(label, value, delta=None, background_color="lightgray", text_color="black"):
+    delta_str = f'<span style="color: {text_color}; font-size: 1.2rem;">{delta}</span>' if delta else ""
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {background_color}; 
+            padding: 10px; 
+            border-radius: 8px; 
+            display: inline-block;
+            color: {text_color};
+            font-size: 1.5rem;">
+            {label} <strong>{value}</strong> {delta_str}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 # Load data only if both files are uploaded
 if solo_file and firm_file:
     try:
@@ -39,6 +56,9 @@ if solo_file and firm_file:
         solo_data = solo_data.sort_values('Month')
         firm_data = firm_data.sort_values('Month')
         
+        sum_2023 = float(solo_data['2023 Sales'].sum())
+        sum_2024 = float(solo_data['2024 Sales'].sum())
+
         # Sidebar filters for user input
         st.sidebar.header("Filters")
         subscription_type = st.sidebar.selectbox("Select Subscription Type:", ["Individual", "Firm"])
@@ -85,20 +105,34 @@ if solo_file and firm_file:
         with col1:
             st.subheader("Key Metrics & KPIs")
             
-            # Display metrics for 2023 without growth indicators
+            # display total sales for 2023 and 2024
             col1a, col1b = st.columns(2)
-            col1a.metric("Total Revenue for 2023 (GHS)", f"GHS {total_revenue_2023:,.2f}")
-            col1b.metric("Total Subscriptions in 2023", f"{total_subscriptions_2023:,}")
+
+            with col1a:
+                 colored_metric("Total Revenue for 2023\n\n", 
+                                f"GHS {sum_2023}", 
+                                background_color="#FF4B4B", 
+                                text_color="#FFFFFF")
+            with col1b:
+                 colored_metric("Total Revenue for 2024\n\n", 
+                                f"GHS {sum_2024}", 
+                                background_color="#FF4B4B", 
+                                text_color="#FFFFFF")
+           
+
+            col1a.metric(f"Total Revenue for {subscription_package} - 2023", 
+                        f"GHS {total_revenue_2023:,.2f}")
+            col1b.metric(f"Total {subscription_package} Subscriptions in 2023", 
+                        f"{total_subscriptions_2023:,}")
 
             # Display metrics for 2024 with growth indicators
             col1a, col1b = st.columns(2)
-            col1a.metric(
-                "Total Revenue for 2024 (GHS)", 
+            col1a.metric(f"Total Revenue for {subscription_package} 2024", 
                 f"GHS {total_revenue_2024:,.2f}", 
                 delta=f"{revenue_growth:.2f}%" if revenue_growth != 0 else "No Change"
             )
             col1b.metric(
-                "Total Subscriptions in 2024", 
+                f"Total {subscription_package} Subscriptions in 2024", 
                 f"{total_subscriptions_2024:,}", 
                 delta=f"{subscription_growth:.2f}%" if subscription_growth != 0 else "No Change"
             )
@@ -172,6 +206,6 @@ if solo_file and firm_file:
         st.write("Last Updated: October 2024")
 
     except Exception as e:
-        st.error(f"Error processing the data: {e}")
+        st.error(f"Relax, ano reach there yet!")
 else:
     st.info("Please upload both Solo and Firm data files to proceed.")
