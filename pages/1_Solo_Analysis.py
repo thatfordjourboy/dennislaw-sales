@@ -95,7 +95,6 @@ with st.sidebar:
             st.session_state.solo_data = None
             st.rerun()
         
-        st.markdown("---")
         st.markdown("### Filters")
         
         # Get the data
@@ -114,7 +113,7 @@ with st.sidebar:
         current_year_df = df[df['Year'] == selected_year]
         prev_year_df = df[df['Year'] == selected_year - 1]
         
-        st.markdown("---")
+       
         
         # Month filter section
         st.markdown("---")
@@ -128,9 +127,7 @@ with st.sidebar:
         month_options = ['All'] + months
         
         # Handle month filter reset
-        if st.button('↺ Reset months', key='clear_months', type='secondary', use_container_width=True):
-            st.session_state.month_filter_reset = True
-            st.rerun()
+        
             
         selected_months = st.multiselect(
             'Select Months',
@@ -138,10 +135,12 @@ with st.sidebar:
             default=['All'] if not st.session_state.month_filter_reset else ['All'],
             key='month_filter'
         )
-        
+        if st.button('↺ Reset months', key='clear_months', type='secondary', use_container_width=True):
+            st.session_state.month_filter_reset = True
+            st.rerun()
         # Package filter section
-        st.markdown("---")
         
+        st.markdown("---")
         # Initialize session state for package filter if not exists
         if 'package_filter_reset' not in st.session_state:
             st.session_state.package_filter_reset = False
@@ -151,9 +150,7 @@ with st.sidebar:
         package_options = ['All'] + packages
         
         # Handle package filter reset
-        if st.button('↺ Reset packages', key='clear_packages', type='secondary', use_container_width=True):
-            st.session_state.package_filter_reset = True
-            st.rerun()
+        
             
         selected_packages = st.multiselect(
             'Select Packages',
@@ -161,7 +158,9 @@ with st.sidebar:
             default=['All'] if not st.session_state.package_filter_reset else ['All'],
             key='package_filter'
         )
-        
+        if st.button('↺ Reset packages', key='clear_packages', type='secondary', use_container_width=True):
+            st.session_state.package_filter_reset = True
+            st.rerun()
         # Handle "All" selection for months and packages
         if 'All' in selected_months:
             selected_months = months
@@ -454,17 +453,8 @@ if st.session_state.solo_data is not None:
             
             # Display the chart
             st.altair_chart(revenue_dist_chart, use_container_width=True)
-else:
-    st.markdown("""
-        <div style="text-align: center; padding: 50px;">
-            <h2>👋 Welcome to the Solo Sales Analysis Dashboard!</h2>
-            <p style="font-size: 18px;">Upload your sales data file using the sidebar to get started</p>
-            <p>Required columns: Month, Year, Subscription Package, Number of Subscriptions, Amount (GHS)</p>
-        </div>
-    """, unsafe_allow_html=True)
 
-# Add this at the end of the file (same indentation as the charts)
-# Key Insights Section
+    # Key Insights Section
     st.markdown("### Key Insights")
     insight_col1, insight_col2, insight_col3 = st.columns(3)
     
@@ -577,116 +567,125 @@ else:
             </div>
         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-# Expandable sections for Glossary and Raw Data
-st.markdown("---")  # Horizontal line for separation
 
-# Create two columns for Glossary and Raw Data
-info_col1, info_col2 = st.columns(2)
+    # Expandable sections for Glossary and Raw Data
+    st.markdown("---")
 
-with info_col1:
-    with st.expander("📖 Glossary"):
-        st.markdown("""
-            ### Metrics Explanation
-            
-            **Revenue Metrics:**
-            - **Total Revenue**: Total earnings from all subscriptions
-            - **YoY Growth**: Year-over-Year percentage change in revenue
-            - **Average Value**: Revenue earned per subscription
-            
-            **Subscription Metrics:**
-            - **Number of Subscriptions**: Total subscriptions sold
-            - **Best Value Package**: Package with highest revenue per subscription
-            - **Package Growth**: Year-over-Year growth rate for each package
-            
-            **Growth Metrics:**
-            - **Quarter Growth**: Current quarter vs same quarter last year
-            - **YTD Growth**: Year-to-Date comparison with previous year
-            
-            **Charts:**
-            - **Monthly Trend**: Revenue pattern over months
-            - **Package Distribution**: Revenue share by package
-            - **Growth Analysis**: Package performance comparison
-        """)
+    # Create two columns for Glossary and Raw Data
+    info_col1, info_col2 = st.columns(2)
 
-with info_col2:
-    with st.expander("📊 View Raw Data"):
-        if st.session_state.solo_data is not None:
-            df = st.session_state.solo_data
-            
-            # Add data filters
-            st.markdown("### Data Filters")
-            
-            # Year filter
-            year_filter = st.multiselect(
-                "Select Years",
-                options=sorted(df['Year'].unique()),
-                default=sorted(df['Year'].unique())
-            )
-            
-            # Month filter
-            month_filter = st.multiselect(
-                "Select Months",
-                options=MONTH_ORDER,
-                default=MONTH_ORDER
-            )
-            
-            # Package filter
-            package_filter = st.multiselect(
-                "Select Packages",
-                options=sorted(df['Subscription Package'].unique()),
-                default=sorted(df['Subscription Package'].unique())
-            )
-            
-            # Filter the dataframe
-            filtered_raw_df = df[
-                (df['Year'].isin(year_filter)) &
-                (df['Month'].isin(month_filter)) &
-                (df['Subscription Package'].isin(package_filter))
-            ]
-            
-            # Show filtered data
-            st.markdown("### Filtered Data")
-            st.dataframe(
-                filtered_raw_df.style.format({
-                    'Amount (GHS)': '{:,.2f}',
-                    'Number of Subscriptions': '{:,}'
-                }),
-                height=300
-            )
-            
-            # Add download button
-            csv = filtered_raw_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                "Download Filtered Data",
-                csv,
-                "solo_sales_data.csv",
-                "text/csv",
-                key='download-csv'
-            )
-            
-            # Show summary statistics
-            st.markdown("### Summary Statistics")
-            
-            # Calculate summary statistics
-            summary = {
-                'Total Revenue': filtered_raw_df['Amount (GHS)'].sum(),
-                'Average Revenue per Month': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().mean(),
-                'Total Subscriptions': filtered_raw_df['Number of Subscriptions'].sum(),
-                'Average Subscriptions per Month': filtered_raw_df.groupby(['Year', 'Month'])['Number of Subscriptions'].sum().mean(),
-                'Highest Monthly Revenue': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().max(),
-                'Lowest Monthly Revenue': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().min(),
-                'Average Revenue per Subscription': filtered_raw_df['Amount (GHS)'].sum() / filtered_raw_df['Number of Subscriptions'].sum()
-            }
-            
-            # Create a formatted dataframe
-            summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=['Value'])
-            
-            # Format the values
-            summary_df['Value'] = summary_df['Value'].apply(lambda x: f"GHS {x:,.2f}" if 'Revenue' in summary_df.index[summary_df['Value'] == x][0] 
-                                                          else f"{x:,.0f}" if 'Subscriptions' in summary_df.index[summary_df['Value'] == x][0]
-                                                          else f"GHS {x:,.2f}")
-            
-            # Display the summary
-            st.dataframe(summary_df, use_container_width=True)
-        else:
-            st.info("Upload data to view raw data and statistics")
+    with info_col1:
+        with st.expander("📖 Glossary"):
+            st.markdown("""
+                ### Metrics Explanation
+                
+                **Revenue Metrics:**
+                - **Total Revenue**: Total earnings from all subscriptions
+                - **YoY Growth**: Year-over-Year percentage change in revenue
+                - **Average Value**: Revenue earned per subscription
+                
+                **Subscription Metrics:**
+                - **Number of Subscriptions**: Total subscriptions sold
+                - **Best Value Package**: Package with highest revenue per subscription
+                - **Package Growth**: Year-over-Year growth rate for each package
+                
+                **Growth Metrics:**
+                - **Quarter Growth**: Current quarter vs same quarter last year
+                - **YTD Growth**: Year-to-Date comparison with previous year
+                
+                **Charts:**
+                - **Monthly Trend**: Revenue pattern over months
+                - **Package Distribution**: Revenue share by package
+                - **Growth Analysis**: Package performance comparison
+            """)
+
+    with info_col2:
+        with st.expander("📊 View Raw Data"):
+            if st.session_state.solo_data is not None:
+                df = st.session_state.solo_data
+                
+                # Add data filters
+                st.markdown("### Data Filters")
+                
+                # Year filter
+                year_filter = st.multiselect(
+                    "Select Years",
+                    options=sorted(df['Year'].unique()),
+                    default=sorted(df['Year'].unique())
+                )
+                
+                # Month filter
+                month_filter = st.multiselect(
+                    "Select Months",
+                    options=MONTH_ORDER,
+                    default=MONTH_ORDER
+                )
+                
+                # Package filter
+                package_filter = st.multiselect(
+                    "Select Packages",
+                    options=sorted(df['Subscription Package'].unique()),
+                    default=sorted(df['Subscription Package'].unique())
+                )
+                
+                # Filter the dataframe
+                filtered_raw_df = df[
+                    (df['Year'].isin(year_filter)) &
+                    (df['Month'].isin(month_filter)) &
+                    (df['Subscription Package'].isin(package_filter))
+                ]
+                
+                # Show filtered data
+                st.markdown("### Filtered Data")
+                st.dataframe(
+                    filtered_raw_df.style.format({
+                        'Amount (GHS)': '{:,.2f}',
+                        'Number of Subscriptions': '{:,}'
+                    }),
+                    height=300
+                )
+                
+                # Add download button
+                csv = filtered_raw_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    "Download Filtered Data",
+                    csv,
+                    "solo_sales_data.csv",
+                    "text/csv",
+                    key='download-csv'
+                )
+                
+                # Show summary statistics
+                st.markdown("### Summary Statistics")
+                
+                # Calculate summary statistics
+                summary = {
+                    'Total Revenue': filtered_raw_df['Amount (GHS)'].sum(),
+                    'Average Revenue per Month': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().mean(),
+                    'Total Subscriptions': filtered_raw_df['Number of Subscriptions'].sum(),
+                    'Average Subscriptions per Month': filtered_raw_df.groupby(['Year', 'Month'])['Number of Subscriptions'].sum().mean(),
+                    'Highest Monthly Revenue': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().max(),
+                    'Lowest Monthly Revenue': filtered_raw_df.groupby(['Year', 'Month'])['Amount (GHS)'].sum().min(),
+                    'Average Revenue per Subscription': filtered_raw_df['Amount (GHS)'].sum() / filtered_raw_df['Number of Subscriptions'].sum()
+                }
+                
+                # Create a formatted dataframe
+                summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=['Value'])
+                
+                # Format the values
+                summary_df['Value'] = summary_df['Value'].apply(lambda x: f"GHS {x:,.2f}" if 'Revenue' in summary_df.index[summary_df['Value'] == x][0] 
+                                                              else f"{x:,.0f}" if 'Subscriptions' in summary_df.index[summary_df['Value'] == x][0]
+                                                              else f"GHS {x:,.2f}")
+                
+                # Display the summary
+                st.dataframe(summary_df, use_container_width=True)
+            else:
+                st.info("Upload data to view raw data and statistics")
+else:
+    st.markdown("""
+        <div style="text-align: center; padding: 50px;">
+            <h2>👋 Welcome to the Solo Sales Analysis Dashboard!</h2>
+            <p style="font-size: 18px;">Upload your sales data file using the sidebar to get started</p>
+            <p>Required columns: Month, Year, Subscription Package, Number of Subscriptions, Amount (GHS)</p>
+        </div>
+    """, unsafe_allow_html=True)
