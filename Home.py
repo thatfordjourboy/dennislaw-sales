@@ -1,8 +1,8 @@
 import streamlit as st
-from utils import init_session_state
+from utils import StateManager
 
 # Initialize session state
-init_session_state()
+StateManager.init_session_state()
 
 # Page config
 st.set_page_config(
@@ -57,7 +57,7 @@ st.markdown("""
     <div class="welcome-header">
         <h1>Welcome to Dennislaw Sales Analysis Dashboard</h1>
         <p style="font-size: 1.2rem; color: #64748b;">
-            Your comprehensive solution for analyzing subscription sales data
+            A comprehensive solution for analyzing subscription sales data
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -103,15 +103,10 @@ with col3:
         </div>
     """, unsafe_allow_html=True)
 
-# Page content
-st.title("Welcome to Dennislaw Sales Analysis")
-
 # Add your home page content here
 st.markdown("""
     ### Getting Started
     1. Use the sidebar to navigate between different analysis views
-    2. Upload your sales data in the Solo Analysis page
+    2. Upload your sales data for the Solo and Firm Analysis page
     3. Explore trends and insights through interactive visualizations
 """)
-
-# You can add more sections, metrics, or welcome content here

@@ -1,15 +1,15 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+from utils import StateManager, MONTH_ORDER
+
+# Initialize session state first
+StateManager.init_session_state()
 
 # Page Configuration
-st.set_page_config(page_title="Firm Analysis", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="Firm Sales Analysis", page_icon="🏢", layout="wide")
 
-# Constants
-MONTH_ORDER = ['January', 'February', 'March', 'April', 'May', 'June', 
-               'July', 'August', 'September', 'October', 'November', 'December']
-
-# Custom CSS (similar to solo analysis)
+# Custom CSS (keep your existing CSS)
 st.markdown("""
     <style>
     .metric-card {
@@ -55,16 +55,43 @@ st.markdown("""
 
 # Sidebar
 with st.sidebar:
-    st.header("Controls")
-    uploaded_file = st.file_uploader("Upload Firm Data", type=['csv', 'xlsx'])
+    if not st.session_state.firm_data_loaded:
+        uploaded_file = st.file_uploader("Upload Firm Data", type=['csv', 'xlsx'])
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+                
+                # Store in session state
+                st.session_state.firm_data = df
+                st.session_state.firm_data_loaded = True
+                
+                # Initialize year filter with the latest year
+                years = sorted(df['Year'].unique())
+                st.session_state.firm_year_filter = years[-1]  # Set to latest year
+                st.session_state.firm_month_filter = ['All']
+                st.session_state.firm_package_filter = ['All']
+                
+                st.success("Data loaded successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error loading file: {str(e)}")
+    else:
+        if st.button("Clear Data", key='clear_firm_data'):
+            st.session_state.firm_data = None
+            st.session_state.firm_data_loaded = False
+            st.session_state.firm_year_filter = None
+            st.session_state.firm_month_filter = ['All']
+            st.session_state.firm_package_filter = ['All']
+            st.rerun()
 
-if uploaded_file is not None:
+# Main content
+if st.session_state.firm_data_loaded and st.session_state.firm_data is not None:
     try:
-        # Load and process data
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
+        # Get data from session state
+        df = st.session_state.firm_data
         
         # Calculate derived metrics
         df['Users per Firm'] = df['Number of Users'] / df['Number of Firms'].where(df['Number of Firms'] > 0, 1)
@@ -73,18 +100,83 @@ if uploaded_file is not None:
         
         # Filters in Sidebar
         with st.sidebar:
-            st.success("Data loaded successfully!")
             st.subheader("Filters")
             
+            # Year filter
             years = sorted(df['Year'].unique())
-            selected_year = st.selectbox('Year', years, index=len(years)-1)
+            if st.session_state.firm_year_filter is None:
+                st.session_state.firm_year_filter = years[-1]
+            year_index = years.index(st.session_state.firm_year_filter)
+            selected_year = st.selectbox('Year', years, 
+                                       index=year_index,
+                                       key='firm_year_filter')
             
-            all_months = sorted(df['Month'].unique())
-            selected_months = st.multiselect('Months', options=['All'] + all_months, default=['All'])
+            st.markdown("---")
             
+            # Month filter section
+            # Sort months according to MONTH_ORDER
+            available_months = df['Month'].unique().tolist()
+            all_months = [month for month in MONTH_ORDER if month in available_months]
+            
+            # Reset months button
+            if st.button('↺ Reset months', key='reset_firm_months', type='secondary', use_container_width=True):
+                st.session_state.firm_month_filter = ['All']
+                st.rerun()
+            
+            # Get previous selection without 'All' if other months are selected
+            prev_month_selection = st.session_state.firm_month_filter
+            if 'All' in prev_month_selection and len(prev_month_selection) > 1:
+                prev_month_selection = [m for m in prev_month_selection if m != 'All']
+            
+            # Month selector
+            selected_months = st.multiselect('Select Months', 
+                                           options=['All'] + all_months,
+                                           default=prev_month_selection,
+                                           key='firm_month_filter')
+            
+            # Handle 'All' selection for months
+            new_month_selection = selected_months
+            if 'All' in selected_months and len(selected_months) > 1:
+                new_month_selection = [m for m in selected_months if m != 'All']
+            elif len(selected_months) == 0:
+                new_month_selection = ['All']
+                
+            if new_month_selection != selected_months:
+                st.session_state.firm_month_filter = new_month_selection
+                st.rerun()
+            
+            st.markdown("---")
+            
+            # Package filter section
             all_packages = sorted(df['Subscription Package'].unique())
-            selected_packages = st.multiselect('Packages', options=['All'] + all_packages, default=['All'])
-        
+            
+            # Reset packages button
+            if st.button('↺ Reset packages', key='reset_firm_packages', type='secondary', use_container_width=True):
+                st.session_state.firm_package_filter = ['All']
+                st.rerun()
+            
+            # Get previous selection without 'All' if other packages are selected
+            prev_package_selection = st.session_state.firm_package_filter
+            if 'All' in prev_package_selection and len(prev_package_selection) > 1:
+                prev_package_selection = [p for p in prev_package_selection if p != 'All']
+            
+            # Package selector
+            selected_packages = st.multiselect('Select Packages', 
+                                             options=['All'] + all_packages,
+                                             default=prev_package_selection,
+                                             key='firm_package_filter')
+            
+            # Handle 'All' selection for packages
+            new_package_selection = selected_packages
+            if 'All' in selected_packages and len(selected_packages) > 1:
+                new_package_selection = [p for p in selected_packages if p != 'All']
+            elif len(selected_packages) == 0:
+                new_package_selection = ['All']
+                
+            if new_package_selection != selected_packages:
+                st.session_state.firm_package_filter = new_package_selection
+                st.rerun()
+
         # Apply filters
         filtered_df = df.copy()
         if 'All' not in selected_months:
@@ -92,31 +184,35 @@ if uploaded_file is not None:
         if 'All' not in selected_packages:
             filtered_df = filtered_df[filtered_df['Subscription Package'].isin(selected_packages)]
             
-        current_year_df = filtered_df[filtered_df['Year'] == selected_year]
-        prev_year_df = filtered_df[filtered_df['Year'] == selected_year - 1]
+        # Get current year data
+        current_year_df = filtered_df[filtered_df['Year'] == selected_year].copy()
+        
+        # Get previous year data safely
+        prev_year = selected_year - 1
+        prev_year_df = filtered_df[filtered_df['Year'] == prev_year] if prev_year in years else pd.DataFrame()
+        
+        # Calculate metrics with safe handling of previous year
+        total_firms = current_year_df['Number of Firms'].sum()
+        prev_firms = prev_year_df['Number of Firms'].sum() if not prev_year_df.empty else 0
+        firms_growth = ((total_firms - prev_firms) / prev_firms * 100) if prev_firms > 0 else 0
+        
+        total_users = current_year_df['Number of Users'].sum()
+        prev_users = prev_year_df['Number of Users'].sum() if not prev_year_df.empty else 0
+        users_growth = ((total_users - prev_users) / prev_users * 100) if prev_users > 0 else 0
+        
+        avg_users_per_firm = total_users / total_firms if total_firms > 0 else 0
+        prev_avg = (prev_users / prev_firms) if prev_firms > 0 else 0
+        avg_growth = ((avg_users_per_firm - prev_avg) / prev_avg * 100) if prev_avg > 0 else 0
+        
+        total_revenue = current_year_df['Amount (GHS)'].sum()
+        prev_revenue = prev_year_df['Amount (GHS)'].sum() if not prev_year_df.empty else 0
+        revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
         
         # Dashboard Title
         st.title(f"Firm Analysis ({selected_year})")
         
         # Main metrics
         col1, col2, col3, col4 = st.columns(4)
-        
-        # Calculate metrics
-        total_firms = current_year_df['Number of Firms'].sum()
-        prev_firms = prev_year_df['Number of Firms'].sum()
-        firms_growth = ((total_firms - prev_firms) / prev_firms * 100) if prev_firms > 0 else 0
-        
-        total_users = current_year_df['Number of Users'].sum()
-        prev_users = prev_year_df['Number of Users'].sum()
-        users_growth = ((total_users - prev_users) / prev_users * 100) if prev_users > 0 else 0
-        
-        avg_users_per_firm = total_users / total_firms if total_firms > 0 else 0
-        prev_avg = prev_users / prev_firms if prev_firms > 0 else 0
-        avg_growth = ((avg_users_per_firm - prev_avg) / prev_avg * 100) if prev_avg > 0 else 0
-        
-        total_revenue = current_year_df['Amount (GHS)'].sum()
-        prev_revenue = prev_year_df['Amount (GHS)'].sum()
-        revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
         
         # Display metrics
         metrics = [
@@ -548,4 +644,74 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Error processing file: {str(e)}")
 else:
-    st.info("Please upload a file to begin analysis.")
+    # Welcome message
+    st.markdown("""
+        <div style="text-align: center; padding: 50px;">
+            <h2>👋 Welcome to the Firm Analysis Dashboard!</h2>
+            <p style="font-size: 18px;">Upload your firm data file using the sidebar to get started</p>
+            <p>Required columns: Month, Year, Subscription Package, Number of Users, Number of Firms, Amount (GHS)</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Features section
+    st.markdown("### 📊 What You Can Analyze")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+            <div class="feature-card">
+                <h4>📈 Firm Growth Trends</h4>
+                <p>Track the number of firms and their growth over time</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>💰 Revenue Metrics</h4>
+                <p>Monitor revenue per firm and per user</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+            <div class="feature-card">
+                <h4>👥 User Distribution</h4>
+                <p>Analyze user counts across different firms and packages</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>📦 Package Analysis</h4>
+                <p>Compare performance across different subscription packages</p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Getting Started section
+    st.markdown("### 🎯 Quick Start Guide")
+    
+    st.info("""
+        1. Prepare your firm data file (CSV or Excel format)
+        2. Use the sidebar uploader to import your data
+        3. Apply filters to focus on specific time periods or packages
+        4. Explore the interactive visualizations and insights
+    """)
+    
+    # Additional tips
+    st.markdown("### 💡 Tips")
+    tips_col1, tips_col2 = st.columns(2)
+    
+    with tips_col1:
+        st.info("""
+            **Analysis Tips:**
+            - Compare year-over-year performance
+            - Track monthly firm growth
+            - Identify popular packages
+            - Monitor user distribution
+        """)
+    
+    with tips_col2:
+        st.info("""
+            **Best Practices:**
+            - Regularly update your data
+            - Use filters to focus on specific periods
+            - Export insights for reporting
+            - Check the glossary for metric definitions
+        """)
