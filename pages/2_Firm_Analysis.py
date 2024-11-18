@@ -9,7 +9,7 @@ StateManager.init_session_state()
 # Page Configuration
 st.set_page_config(page_title="Firm Sales Analysis", page_icon="🏢", layout="wide")
 
-# Custom CSS (keep your existing CSS)
+# Custom CSS
 st.markdown("""
     <style>
     .metric-card {
@@ -56,13 +56,10 @@ st.markdown("""
 # Sidebar
 with st.sidebar:
     if not st.session_state.firm_data_loaded:
-        uploaded_file = st.file_uploader("Upload Firm Data", type=['csv', 'xlsx'])
+        uploaded_file = st.file_uploader("Upload Firm Data", type=['csv'])
         if uploaded_file is not None:
             try:
-                if uploaded_file.name.endswith('.csv'):
-                    df = pd.read_csv(uploaded_file)
-                else:
-                    df = pd.read_excel(uploaded_file)
+                df = pd.read_csv(uploaded_file)
                 
                 # Store in session state
                 st.session_state.firm_data = df
@@ -231,8 +228,6 @@ if st.session_state.firm_data_loaded and st.session_state.firm_data is not None:
                         {f'<div class="metric-delta {("positive" if change > 0 else "negative")}">{change:+.1f}%</div>' if change is not None else ''}
                     </div>
                 """, unsafe_allow_html=True)
-                
-        # After metrics section, add visualizations
         
         # Main content layout
         left_col, right_col = st.columns([2, 1])
@@ -561,10 +556,9 @@ if st.session_state.firm_data_loaded and st.session_state.firm_data is not None:
             
             st.altair_chart(revenue_per_user_chart, use_container_width=True)
 
-        # After all visualizations, add a divider
         st.markdown("---")
         
-        # Create two columns for Glossary and Data View
+        # Two columns for Glossary and Data View
         bottom_left, bottom_right = st.columns([1, 1])
         
         with bottom_left:
@@ -633,14 +627,8 @@ if st.session_state.firm_data_loaded and st.session_state.firm_data is not None:
                     "text/csv",
                     key='download-csv'
                 )
-
-        # Optional: Add footer with timestamp
         st.markdown("---")
-        st.markdown(f"""
-            <div style="text-align: center; color: #6b7280; font-size: 0.875rem;">
-                Last updated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
-            </div>
-        """, unsafe_allow_html=True)
+    
     except Exception as e:
         st.error(f"Error processing file: {str(e)}")
 else:
@@ -688,7 +676,7 @@ else:
     st.markdown("### 🎯 Quick Start Guide")
     
     st.info("""
-        1. Prepare your firm data file (CSV or Excel format)
+        1. Prepare your firm data file (CSV format)
         2. Use the sidebar uploader to import your data
         3. Apply filters to focus on specific time periods or packages
         4. Explore the interactive visualizations and insights

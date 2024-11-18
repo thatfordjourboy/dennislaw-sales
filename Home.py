@@ -103,7 +103,6 @@ with col3:
         </div>
     """, unsafe_allow_html=True)
 
-# Add your home page content here
 st.markdown("""
     ### Getting Started
     1. Use the sidebar to navigate between different analysis views

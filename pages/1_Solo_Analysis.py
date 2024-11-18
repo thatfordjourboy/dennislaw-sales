@@ -71,14 +71,10 @@ st.markdown("""
 # Sidebar
 with st.sidebar:
     if not st.session_state.solo_data_loaded:
-        uploaded_file = st.file_uploader("Upload Solo Data", type=['csv', 'xlsx'])
+        uploaded_file = st.file_uploader("Upload Solo Data", type=['csv'])
         if uploaded_file is not None:
             try:
-                if uploaded_file.name.endswith('.csv'):
-                    df = pd.read_csv(uploaded_file)
-                else:
-                    df = pd.read_excel(uploaded_file)
-                
+                df = pd.read_csv(uploaded_file)
                 # Store in session state
                 st.session_state.solo_data = df
                 st.session_state.solo_data_loaded = True
@@ -118,8 +114,6 @@ with st.sidebar:
         # Initialize month filter in session state if not exists
         if 'month_filter' not in st.session_state:
             st.session_state.month_filter = ['All']
-        if 'prev_month_selection' not in st.session_state:
-            st.session_state.prev_month_selection = ['All']
         
         # Month filter
         months = sorted(current_year_df['Month'].unique().tolist(), key=lambda x: MONTH_ORDER.index(x))
@@ -128,25 +122,27 @@ with st.sidebar:
         # Reset months button
         if st.button('↺ Reset months', key='reset_months', type='secondary', use_container_width=True):
             st.session_state.prev_month_selection = ['All']
+            st.session_state.month_filter = ['All']  # Resetting the session state
             st.rerun()
         
+        # Use session state value for the multiselect
         selected_months = st.multiselect(
             'Select Months',
             options=month_options,
-            default=st.session_state.prev_month_selection,
+            default=st.session_state.month_filter,  # Use session state value directly
             key='month_filter'
         )
 
         # Handle 'All' selection logic for months without modifying session state directly
-        if selected_months != st.session_state.prev_month_selection:
+        if selected_months != st.session_state.month_filter:
             if 'All' in selected_months and len(selected_months) > 1:
-                st.session_state.prev_month_selection = [m for m in selected_months if m != 'All']
+                st.session_state.month_filter = [m for m in selected_months if m != 'All']
                 st.rerun()
             elif len(selected_months) == 0:
-                st.session_state.prev_month_selection = ['All']
+                st.session_state.month_filter = ['All']
                 st.rerun()
             else:
-                st.session_state.prev_month_selection = selected_months
+                st.session_state.month_filter = selected_months
 
         # Package filter section
         st.markdown("---")
@@ -737,7 +733,7 @@ else:
     st.markdown("### 🎯 Quick Start Guide")
     
     st.info("""
-        1. Prepare your solo data file (CSV or Excel format)
+        1. Prepare your solo data file (CSV format)
         2. Use the sidebar uploader to import your data
         3. Apply filters to focus on specific months or packages
         4. Explore the interactive visualizations and insights
